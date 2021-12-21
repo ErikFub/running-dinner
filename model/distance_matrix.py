@@ -42,6 +42,3 @@ class DistanceMatrix:
         with open('sample_data/nodes.npy', 'rb') as f:
             nodes = np.load(f)
         return nodes, matrix
-
-    def get_shortest_distances(self):
-        pass
