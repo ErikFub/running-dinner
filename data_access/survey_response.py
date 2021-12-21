@@ -11,9 +11,9 @@ class SurveyResponseAccess:
 
     @staticmethod
     def get_data_dummy(deserialized=True):
-        data = pd.read_csv('data_access/survey_response_sample.csv')
+        data = pd.read_csv('sample_data/survey_response_sample.csv')
         if deserialized:
-            # TO IMPROVE
+            # TO CHANGE
             return [Participant.deserialize(response) for response in data.to_numpy().tolist()]
         else:
             return data
