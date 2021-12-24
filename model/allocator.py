@@ -146,4 +146,9 @@ class Allocator:
         self.actual_distances = {}
         self.eligible_teams_distances = None
 
+    def save_best_allocations(self):
+        for stage in self.best_allocation.keys():
+            with open(f'sample_data/best_allocations/stage_{stage}.npy', 'wb') as f:
+                np.save(f, self.best_allocation[stage])
+
 
