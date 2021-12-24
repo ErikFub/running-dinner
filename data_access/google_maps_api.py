@@ -9,8 +9,8 @@ class GoogleMapsAPI:
         self.api_key = SecretsManager.get_password('directions_api')
 
     def get_distance(self, node, neighbor, mode: str = "transit"):
-        response = requests.get(self.base_url + self.data_format, params={'origin': node,
-                                                                          'destination': neighbor,
+        response = requests.get(self.base_url + self.data_format, params={'origin': node + ' Lisbon',
+                                                                          'destination': neighbor + ' Lisbon',
                                                                           'key': self.api_key,
                                                                           'mode': mode,
                                                                           'units': 'metric'})
