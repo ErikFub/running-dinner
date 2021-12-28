@@ -1,5 +1,5 @@
 import numpy as np
-from data_access.google_maps_api import GoogleMapsAPI
+from data_access.google_maps_api import DirectionsAPI
 from data_access.survey_response import Participant
 from data_access.final_dest import FinalDestination
 
@@ -11,22 +11,27 @@ class DistanceMatrix:
         else:
             self.nodes = [((p.first_name + ' ' + p.last_name), p.address) for p in matrix_data]
             self.final_dest_address = final_dest.address
-            self.distances, self.distances_final_dest = self.construct()
+            self.distances, self.distances_final_dest, self.polylines_matrix, self.polylines_final_dest_matrix = self.construct()
         #print("Matrix successfully constructed")
 
     def construct(self):
         num_nodes = len(self.nodes)
         distance_matrix = np.zeros((num_nodes, num_nodes))
+        polylines_matrix = np.empty((num_nodes, num_nodes), dtype="<U5000")
         distances_final_dest_matrix = np.zeros(num_nodes)
-        maps = GoogleMapsAPI()
+        polylines_final_dest_matrix = np.empty(num_nodes, dtype="<U5000")
         for i, node in enumerate(self.nodes):
             node_address = node[1]
             for j, neighbor in enumerate(self.nodes):
                 if i != j:
                     neighbor_address = neighbor[1]
-                    distance_matrix[i][j] = maps.get_distance(node_address, neighbor_address)
-            distances_final_dest_matrix[i] = maps.get_distance(node_address, self.final_dest_address)
-        return distance_matrix, distances_final_dest_matrix
+                    directions_api = DirectionsAPI(node_address, neighbor_address, 'walking')
+                    distance_matrix[i][j] = directions_api.distance
+                    polylines_matrix[i][j] = directions_api.polyline
+            directions_api = DirectionsAPI(node_address, self.final_dest_address, 'walking')
+            distances_final_dest_matrix[i] = directions_api.distance
+            polylines_final_dest_matrix[i] = directions_api.polyline
+        return distance_matrix, distances_final_dest_matrix, polylines_matrix, polylines_final_dest_matrix
 
     def print_distances(self):
         for i, node in enumerate(self.nodes):
@@ -43,6 +48,11 @@ class DistanceMatrix:
             np.save(f, self.nodes)
         with open('sample_data/distances_final_dest.npy', 'wb') as f:
             np.save(f, self.distances_final_dest)
+        with open('sample_data/polylines_matrix.npy', 'wb') as f:
+            np.save(f, self.polylines_matrix)
+        with open('sample_data/polylines_final_dest.npy', 'wb') as f:
+            np.save(f, self.polylines_final_dest_matrix)
+
 
     @staticmethod
     def load_dummies():
