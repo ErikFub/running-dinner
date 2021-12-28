@@ -57,7 +57,7 @@ class Allocator:
         mid_stages = range(self.n_rounds+1)[2:-1]
         for stage in mid_stages:
             eligible_hosts = [i for i, t in enumerate(self.eligible_teams) if t not in self.visited_locations]
-            chosen_hosts = np.random.choice(eligible_hosts, self.n_rounds, replace=False)
+            chosen_hosts = np.random.choice(eligible_hosts, self.n_locations, replace=False)
             chosen_hosts_num = [self.eligible_teams[i] for i in chosen_hosts]
             self.stage_hosts[stage] = chosen_hosts_num
             self.visited_locations += chosen_hosts_num
@@ -66,7 +66,7 @@ class Allocator:
 
     def allocate_first_stage(self):
         eligible_hosts = [i for i, t in enumerate(self.eligible_teams) if t not in self.visited_locations]
-        chosen_hosts = np.random.choice(eligible_hosts, self.n_rounds, replace=False)
+        chosen_hosts = np.random.choice(eligible_hosts, self.n_locations, replace=False)
         chosen_hosts_num = [self.eligible_teams[i] for i in chosen_hosts]
         self.stage_hosts[1] = chosen_hosts_num
         self.visited_locations += chosen_hosts_num
@@ -81,24 +81,22 @@ class Allocator:
 
     def allocate_guests(self, host_matrix, stage):
         self.update_met_teams()
-        success = False
-        while not success:
-            matrix = host_matrix.copy()
-            possible_guests = [i for i, team in enumerate(self.eligible_teams) if team not in self.stage_hosts[stage]]
-            for i, row in enumerate(matrix):
-                if matrix[i][i] == 1:
-                    prohibited_guests = self.met_teams[i].copy()
-                    for j in range(self.n_rounds-1):
-                        eligible_guests = [g for g in possible_guests if g not in prohibited_guests]
-                        if len(eligible_guests) == 0:
-                            break
-                        else:
-                            guest = np.random.choice(eligible_guests, replace=False)
-                            possible_guests.remove(guest)
-                            prohibited_guests.update(self.met_teams[guest])
-                            matrix[guest][i] = 1
-            else:
-                success = True
+        matrix = host_matrix.copy()
+        possible_guests = [i for i, team in enumerate(self.eligible_teams) if team not in self.stage_hosts[stage]] # get all teams that are not hosts in that round
+        for i, row in enumerate(matrix):
+            if matrix[i][i] == 1:
+                prohibited_guests = self.met_teams[i].copy()
+                for j in range(self.n_rounds-1):
+                    eligible_guests = [g for g in possible_guests if g not in prohibited_guests]
+                    if len(eligible_guests) == 0:
+                        # if based on prior allocation no allocation in which teams don't see each other 2 times is
+                        # possible, then return an ones matrix. Allocation will be discarded as costs are too high.
+                        return np.ones(matrix.shape)
+                    else:
+                        guest = np.random.choice(eligible_guests)
+                        possible_guests.remove(guest)
+                        prohibited_guests.update(self.met_teams[guest])
+                        matrix[guest][i] = 1
         return matrix
 
     def update_met_teams(self):
@@ -120,7 +118,7 @@ class Allocator:
         for i in range(self.n_rounds):
             stage = i+1
             if stage == 1:
-                self.actual_distances[stage] = np.zeros(self.eligible_teams_distances.shape)
+                self.actual_distances[stage] = self.eligible_teams_distances
             else:
                 allocation_matrix = self.allocation_matrices[stage-1].copy()
                 actual_distances = np.zeros(self.eligible_teams_distances.shape)
@@ -132,8 +130,11 @@ class Allocator:
     def evaluate_allocation(self):
         total_costs = 0
         for stage in self.allocation_matrices.keys():
-            costs = np.sum(self.allocation_matrices[stage] * self.eligible_teams_distances[stage])
-            total_costs += costs
+            if stage == 1:
+                stage_costs = 0.33 * np.sum(self.allocation_matrices[stage] * self.actual_distances[stage])
+            else:
+                stage_costs = np.sum(self.allocation_matrices[stage] * self.actual_distances[stage])
+            total_costs += stage_costs
         return total_costs
 
     def reset(self):
@@ -147,5 +148,3 @@ class Allocator:
 
     def save_best_allocations(self):
         OptimalSolutionAccess().save(self.best_allocation, self.best_allocation_teams)
-
-
