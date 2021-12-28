@@ -9,6 +9,6 @@ class FinalDestination:
         pass
 
     @staticmethod
-    def get_dummy(self):
+    def get_dummy():
         data = pd.read_csv("sample_data/final_destination_sample.csv")
         return data.iloc[0]['name'], data.iloc[0]['address']
