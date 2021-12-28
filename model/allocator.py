@@ -1,8 +1,7 @@
 import math
 import numpy as np
-import random
 from model.distance_matrix import DistanceMatrix
-from tqdm import tqdm
+from data_access.optimal_solution import OptimalSolutionAccess
 
 
 class Allocator:
@@ -22,6 +21,7 @@ class Allocator:
         self.eligible_teams_distances = None
         self.lowest_costs = math.inf
         self.best_allocation = None
+        self.best_allocation_teams = None
 
     def print_stats(self):
         print("Participants:", self.n_participants)
@@ -36,9 +36,9 @@ class Allocator:
         costs = self.evaluate_allocation()
         if costs < self.lowest_costs:
             self.best_allocation = self.allocation_matrices.copy()
+            self.best_allocation_teams = self.eligible_teams.copy()
             self.lowest_costs = costs
         self.reset()
-
 
     def allocate_last_stage(self):
         nearest_locations = np.argpartition(self.matrix.distances_final_dest, self.n_locations)[:self.n_locations]
@@ -80,7 +80,6 @@ class Allocator:
         return matrix
 
     def allocate_guests(self, host_matrix, stage):
-        # add constraint: teams that will meet in later stage can't re-meet
         self.update_met_teams()
         success = False
         while not success:
@@ -147,8 +146,6 @@ class Allocator:
         self.eligible_teams_distances = None
 
     def save_best_allocations(self):
-        for stage in self.best_allocation.keys():
-            with open(f'sample_data/best_allocations/stage_{stage}.npy', 'wb') as f:
-                np.save(f, self.best_allocation[stage])
+        OptimalSolutionAccess().save(self.best_allocation, self.best_allocation_teams)
 
 
