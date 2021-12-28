@@ -33,6 +33,11 @@ class DistanceMatrix:
             polylines_final_dest_matrix[i] = directions_api.polyline
         return distance_matrix, distances_final_dest_matrix, polylines_matrix, polylines_final_dest_matrix
 
+    def filter(self, nodes):
+        self.distances = self.distances[nodes, :][:, nodes]
+        self.distances_final_dest = self.distances_final_dest[nodes]
+        self.nodes = self.nodes[nodes]
+
     def print_distances(self):
         for i, node in enumerate(self.nodes):
             print(f"Distances for {node[0]} ({node[1]}):")
