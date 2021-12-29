@@ -1,3 +1,4 @@
+import json
 import os
 import numpy as np
 
@@ -38,11 +39,27 @@ class OptimalSolutionAccess:
         else:
             return polylines_final_dest[nodes]
 
-    def save(self, allocation_matrices: dict[np.array] = None, nodes: list = None):
-        if allocation_matrices:
-            for stage in allocation_matrices:
-                with open(f'{self.project_directory}/sample_data/optimal_solution/stage_{stage}.npy', 'wb') as f:
-                    np.save(f, allocation_matrices[stage])
-        if nodes:
-            with open(f'{self.project_directory}/sample_data/optimal_solution/nodes.npy', 'wb') as f:
-                np.save(f, np.array(nodes))
+    def get_metadata(self) -> dict:
+        with open(f'{self.project_directory}/sample_data/optimal_solution/metadata.json', 'r') as f:
+            metadata = json.load(f)
+        return metadata
+
+    def save(self, optimizer):
+        for stage in optimizer.best_allocation:
+            with open(f'{self.project_directory}/sample_data/optimal_solution/stage_{stage}.npy', 'wb') as f:
+                np.save(f, optimizer.best_allocation[stage])
+        with open(f'{self.project_directory}/sample_data/optimal_solution/nodes.npy', 'wb') as f:
+            np.save(f, np.array(optimizer.best_allocation_teams))
+        with open(f'{self.project_directory}/sample_data/optimal_solution/metadata.json', 'w') as f:
+            json.dump(self._construct_metadata(optimizer), f)
+
+    @staticmethod
+    def _construct_metadata(optimizer) -> dict:
+        metadata = {
+            "n_teams": optimizer.n_teams,
+            "n_participants": optimizer.n_participants,
+            "n_locations": optimizer.n_locations,
+            "n_iter": optimizer.n_iter,
+            "prefiltered": optimizer.prefilter
+        }
+        return metadata

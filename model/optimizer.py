@@ -65,4 +65,4 @@ class Optimizer:
         self.matrix.filter(filtered_teams)
 
     def save_best_allocations(self):
-        OptimalSolutionAccess().save(self.best_allocation, self.best_allocation_teams)
+        OptimalSolutionAccess().save(self)
