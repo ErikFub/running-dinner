@@ -1,44 +1,26 @@
-import math
 import numpy as np
 from model.distance_matrix import DistanceMatrix
-from data_access.optimal_solution import OptimalSolutionAccess
 
 
 class Allocator:
-    def __init__(self, matrix: DistanceMatrix, n_rounds: int = 3, n_team_members: int = 2):
+    def __init__(self, matrix: DistanceMatrix, n_rounds: int, n_locations: int):
         self.matrix = matrix
         self.n_rounds = n_rounds
-        self.n_team_members = n_team_members
         self.n_participants = self.matrix.distances.shape[0]
-        self.n_locations = math.floor(self.n_participants / n_rounds / n_team_members)
+        self.n_locations = n_locations
         self.n_teams = self.n_locations * n_rounds
         self.allocation_matrices = {}
         self.visited_locations = []
         self.stage_hosts = {}
         self.eligible_teams = []
         self.met_teams = {i: set() for i in range(self.n_teams)}
-        self.actual_distances = {}
-        self.eligible_teams_distances = None
-        self.lowest_costs = math.inf
-        self.best_allocation = None
-        self.best_allocation_teams = None
 
-    def print_stats(self):
-        print("Participants:", self.n_participants)
-        print("Locations per Round:", self.n_locations)
-        print("Teams:", self.n_teams)
-
-    def run_and_evaluate_sample(self):
+    def get_feasible_solution(self):
         self.allocate_last_stage()
         self.allocate_mid_stages()
         self.allocate_first_stage()
-        self.get_actual_distances()
-        costs = self.evaluate_allocation()
-        if costs < self.lowest_costs:
-            self.best_allocation = self.allocation_matrices.copy()
-            self.best_allocation_teams = self.eligible_teams.copy()
-            self.lowest_costs = costs
-        self.reset()
+        return self.allocation_matrices, self.eligible_teams
+
 
     def allocate_last_stage(self):
         nearest_locations = np.argpartition(self.matrix.distances_final_dest, self.n_locations)[:self.n_locations]
@@ -50,8 +32,6 @@ class Allocator:
                                                 self.n_teams - self.n_locations, replace=False).tolist()
         allocation_matrix = self.allocate_guests(allocation_matrix, self.n_rounds)
         self.allocation_matrices[self.n_rounds] = allocation_matrix
-        #print(allocation_matrix)
-        #print(self.visited_locations)
 
     def allocate_mid_stages(self):
         mid_stages = range(self.n_rounds+1)[2:-1]
@@ -109,42 +89,3 @@ class Allocator:
                         covisited = [k for k, v in enumerate(col) if v == 1 and k != j]
                         # met teams = index in allocation matrix, not team num
                         self.met_teams[j].update(covisited)
-
-    def _get_eligible_teams_distances(self):
-        self.eligible_teams_distances = self.matrix.distances[self.eligible_teams, :][:, self.eligible_teams]
-
-    def get_actual_distances(self):
-        self._get_eligible_teams_distances()
-        for i in range(self.n_rounds):
-            stage = i+1
-            if stage == 1:
-                self.actual_distances[stage] = self.eligible_teams_distances
-            else:
-                allocation_matrix = self.allocation_matrices[stage-1].copy()
-                actual_distances = np.zeros(self.eligible_teams_distances.shape)
-                for team_idx, row in enumerate(allocation_matrix):
-                    host_idx = np.argmax(row)
-                    actual_distances[team_idx] = self.eligible_teams_distances[host_idx]
-                self.actual_distances[stage] = actual_distances
-
-    def evaluate_allocation(self):
-        total_costs = 0
-        for stage in self.allocation_matrices.keys():
-            if stage == 1:
-                stage_costs = 0.33 * np.sum(self.allocation_matrices[stage] * self.actual_distances[stage])
-            else:
-                stage_costs = np.sum(self.allocation_matrices[stage] * self.actual_distances[stage])
-            total_costs += stage_costs
-        return total_costs
-
-    def reset(self):
-        self.allocation_matrices = {}
-        self.visited_locations = []
-        self.stage_hosts = {}
-        self.eligible_teams = []
-        self.met_teams = {i: set() for i in range(self.n_teams)}
-        self.actual_distances = {}
-        self.eligible_teams_distances = None
-
-    def save_best_allocations(self):
-        OptimalSolutionAccess().save(self.best_allocation, self.best_allocation_teams)
