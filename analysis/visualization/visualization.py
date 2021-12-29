@@ -4,6 +4,7 @@ import os
 import numpy as np
 import random
 from data_access.optimal_solution import OptimalSolutionAccess
+from data_access.precomputation import PrecomputationDataAccess
 
 
 class GeoJsonCreator:
@@ -59,16 +60,18 @@ class MapVisualization:
     def get_actual_polylines(self):
         for stage in self.best_allocations:
             if stage == 1:
+                # because we don't want to see how everyone arrives to the appetizer, we create an empty matrix
                 self.actual_polylines[stage] = np.empty(self.polylines_matrix.shape, dtype='<U5000')
             else:
-                allocation_matrix = self.best_allocations[stage-1].copy()
+                prior_location_matrix = self.best_allocations[stage-1].copy()
                 actual_polylines = np.empty(self.polylines_matrix.shape, dtype='<U5000')
-                for team_idx, row in enumerate(allocation_matrix):
+                for team_idx, row in enumerate(prior_location_matrix):
                     host_idx = np.argmax(row)
-                    actual_polylines[team_idx] = self.polylines_matrix[host_idx]
+                    actual_polylines[team_idx] = self.polylines_matrix[host_idx] # set polylines for each time according to those of host
                 self.actual_polylines[stage] = actual_polylines
 
-    def _get_random_color(self):
+    @staticmethod
+    def _get_random_color():
         r = lambda: random.randint(0, 255)
         return '#%02X%02X%02X' % (r(), r(), r())
 
@@ -88,7 +91,7 @@ class MapVisualization:
                 stage_color = self._get_random_color()
                 for r in range(allocation_matrix.shape[0]):
                     for c in range(allocation_matrix.shape[1]):
-                        if allocation_matrix[r][c] == 1 and r != c:
+                        if allocation_matrix[r][c] == 1:
                             pline = self.actual_polylines[stage][r][c]
                             geo_json.create_polyline(pline, color=stage_color)
                             geo_json.create_point_from_polyline(pline, color=stage_color)
@@ -107,6 +110,9 @@ class MapVisualization:
         optimal_solution = OptimalSolutionAccess()
         allocation_matrices = optimal_solution.get_allocation_matrices()
         nodes = optimal_solution.get_nodes()
+        metadata = optimal_solution.get_metadata()
+        if metadata['prefiltered']:
+            nodes = [PrecomputationDataAccess().get_filtered_nodes()[n] for n in nodes]
         polylines_matrix = optimal_solution.get_polylines_matrix(nodes)
         polylines_final_dest = optimal_solution.get_polylines_final_dest(nodes)
         return polylines_matrix, polylines_final_dest, allocation_matrices, nodes
