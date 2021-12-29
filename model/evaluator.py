@@ -3,10 +3,10 @@ from model.distance_matrix import DistanceMatrix
 
 
 class Evaluator:
-    def __init__(self, matrix: DistanceMatrix, allocation_matrices: dict[np.array], teams: list):
+    def __init__(self, distances: np.array, allocation_matrices: dict[np.array], teams: list):
         self.allocation_matrices = allocation_matrices
         self.actual_distances = {}
-        self.teams_distances = matrix.distances[teams, :][:, teams]
+        self.teams_distances = distances[teams, :][:, teams]
 
     def get_actual_distances(self):
         for stage in self.allocation_matrices:

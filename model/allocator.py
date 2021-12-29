@@ -1,4 +1,5 @@
 import numpy as np
+import random
 from model.distance_matrix import DistanceMatrix
 
 
@@ -6,7 +7,6 @@ class Allocator:
     def __init__(self, matrix: DistanceMatrix, n_rounds: int, n_locations: int):
         self.matrix = matrix
         self.n_rounds = n_rounds
-        self.n_participants = self.matrix.distances.shape[0]
         self.n_locations = n_locations
         self.n_teams = self.n_locations * n_rounds
         self.allocation_matrices = {}
@@ -21,15 +21,15 @@ class Allocator:
         self.allocate_first_stage()
         return self.allocation_matrices, self.eligible_teams
 
-
     def allocate_last_stage(self):
-        nearest_locations = np.argpartition(self.matrix.distances_final_dest, self.n_locations)[:self.n_locations]
+        teams_partitioned = np.argpartition(self.matrix.distances_final_dest, self.n_locations)
+        nearest_locations = teams_partitioned[:self.n_locations]
+        remaining_locations = teams_partitioned[self.n_locations:]
         self.stage_hosts[self.n_rounds] = nearest_locations
         self.eligible_teams += nearest_locations.tolist()
         self.visited_locations += nearest_locations.tolist()
-        allocation_matrix = self.create_host_matrix(range(len(nearest_locations)))
-        self.eligible_teams += np.random.choice([i for i in range(self.n_participants) if i not in nearest_locations],
-                                                self.n_teams - self.n_locations, replace=False).tolist()
+        allocation_matrix = self.create_host_matrix(range(self.n_locations))
+        self.eligible_teams += random.sample(remaining_locations.tolist(), k=(self.n_teams - self.n_locations))
         allocation_matrix = self.allocate_guests(allocation_matrix, self.n_rounds)
         self.allocation_matrices[self.n_rounds] = allocation_matrix
 
@@ -60,7 +60,7 @@ class Allocator:
         return matrix
 
     def allocate_guests(self, host_matrix, stage):
-        self.update_met_teams()
+        self.update_met_teams_b()
         matrix = host_matrix.copy()
         possible_guests = [i for i, team in enumerate(self.eligible_teams) if team not in self.stage_hosts[stage]] # get all teams that are not hosts in that round
         for i, row in enumerate(matrix):
@@ -70,8 +70,8 @@ class Allocator:
                     eligible_guests = [g for g in possible_guests if g not in prohibited_guests]
                     if len(eligible_guests) == 0:
                         # if based on prior allocation no allocation in which teams don't see each other 2 times is
-                        # possible, then return an ones matrix. Allocation will be discarded as costs are too high.
-                        return np.ones(matrix.shape)
+                        # possible, then return a 2s matrix. Allocation will be discarded as costs are too high.
+                        return np.full(matrix.shape, 2)
                     else:
                         guest = np.random.choice(eligible_guests)
                         possible_guests.remove(guest)
@@ -80,7 +80,7 @@ class Allocator:
         return matrix
 
     def update_met_teams(self):
-        for stage in self.allocation_matrices.keys():
+        for stage in self.allocation_matrices:
             allocation_matrix = self.allocation_matrices[stage]
             for i in range(allocation_matrix.shape[0]):
                 col = allocation_matrix[:, i]
@@ -89,3 +89,11 @@ class Allocator:
                         covisited = [k for k, v in enumerate(col) if v == 1 and k != j]
                         # met teams = index in allocation matrix, not team num
                         self.met_teams[j].update(covisited)
+
+    def update_met_teams_b(self):
+        for stage in self.allocation_matrices:
+            allocation_matrix = self.allocation_matrices[stage]
+            allocations = np.transpose(np.nonzero(allocation_matrix == 1))
+            for allocation in allocations:
+                covisitors = allocations[(allocations[:, 1] == allocation[1]) & (allocations[:, 0] != allocation[0])][:,0]
+                self.met_teams[allocation[0]].update(covisitors)
