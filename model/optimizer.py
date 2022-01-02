@@ -10,7 +10,7 @@ import numpy as np
 
 
 class Optimizer:
-    def __init__(self, matrix: DistanceMatrix, n_rounds: int = 3, n_team_members: int = 2, n_iter: int = 10000):
+    def __init__(self, matrix: DistanceMatrix, n_rounds: int = 3, n_team_members: int = 2, n_iter: int = 10000) -> None:
         self.matrix = matrix
         self.n_iter = n_iter
         self.n_rounds = n_rounds
@@ -23,12 +23,12 @@ class Optimizer:
         self.best_allocation_teams = None
         self.prefilter = None
 
-    def print_stats(self):
+    def print_stats(self) -> None:
         print("Participants:", self.n_participants)
         print("Locations per Round:", self.n_locations)
         print("Teams:", self.n_teams)
 
-    def run(self, progress_bar: bool = False, prefilter: bool = False, load_precomputed: bool = True):
+    def run(self, progress_bar: bool = False, prefilter: bool = False, load_precomputed: bool = True) -> Optimizer:
         self.prefilter = prefilter
         if prefilter:
             self.prefilter_nodes(load_precomputed=load_precomputed)
@@ -43,22 +43,23 @@ class Optimizer:
                 self.lowest_costs = costs
         return self
 
-    def run_parallel(self, progress_bar: bool = False, prefilter: bool = False, load_precomputed: bool = True):
+    def run_parallel(self, progress_bar: bool = False, prefilter: bool = False, load_precomputed: bool = True) -> None:
         n_parallelized = 6
         opt_params = self.matrix, self.n_rounds, self.n_team_members, self.n_iter
         run_params = False, prefilter, load_precomputed
-        optimization_results = Parallel(n_jobs=n_parallelized, verbose=20)(delayed(Optimizer(self.matrix, n_iter=self.n_iter).run)(run_params) for i in range(n_parallelized))
+        optimization_results = Parallel(n_jobs=n_parallelized, verbose=20)\
+            (delayed(Optimizer(self.matrix, n_iter=self.n_iter).run)(run_params) for i in range(n_parallelized))
         best_model = optimization_results[np.argmin([opt.lowest_costs for opt in optimization_results])]
         print([opt.lowest_costs for opt in optimization_results])
         self.lowest_costs = best_model.lowest_costs
         self.best_allocation = best_model.best_allocation
         self.best_allocation_teams = best_model.best_allocation_teams
 
-    def prefilter_nodes(self, load_precomputed: bool = True):
+    def prefilter_nodes(self, load_precomputed: bool = True) -> None:
         if load_precomputed:
             filtered_teams = PrecomputationDataAccess().get_filtered_nodes()
         else:
-            def run_rep(matrix, n_rounds, n_locations, n_iter):
+            def run_rep(matrix, n_rounds, n_locations, n_iter) -> list:
                 base_optimization_iter_mult = 1
                 base_iter = int(base_optimization_iter_mult * n_iter)
                 rep_costs = math.inf

@@ -1,9 +1,20 @@
 import numpy as np
 import random
 from model.distance_matrix import DistanceMatrix
+from typing import Union
 
 
 class Allocator:
+    matrix: DistanceMatrix
+    n_rounds: int
+    n_locations: int
+    n_teams: int
+    allocation_matrices: dict[int, np.ndarray]
+    visited_locations: list
+    stage_hosts: dict[int, Union[np.ndarray, list]]
+    eligible_teams: list
+    met_teams: dict[int, set]
+
     def __init__(self, matrix: DistanceMatrix, n_rounds: int, n_locations: int):
         self.matrix = matrix
         self.n_rounds = n_rounds
@@ -15,25 +26,25 @@ class Allocator:
         self.eligible_teams = []
         self.met_teams = {i: set() for i in range(self.n_teams)}
 
-    def get_feasible_solution(self):
+    def get_feasible_solution(self) -> tuple[dict, list]:
         self.allocate_last_stage()
         self.allocate_mid_stages()
         self.allocate_first_stage()
         return self.allocation_matrices, self.eligible_teams
 
-    def allocate_last_stage(self):
+    def allocate_last_stage(self) -> None:
         teams_partitioned = np.argpartition(self.matrix.distances_final_dest, self.n_locations)
         nearest_locations = teams_partitioned[:self.n_locations]
         remaining_locations = teams_partitioned[self.n_locations:]
         self.stage_hosts[self.n_rounds] = nearest_locations
         self.eligible_teams += nearest_locations.tolist()
         self.visited_locations += nearest_locations.tolist()
-        allocation_matrix = self.create_host_matrix(range(self.n_locations))
+        allocation_matrix = self.create_host_matrix(np.array(range(self.n_locations)))
         self.eligible_teams += random.sample(remaining_locations.tolist(), k=(self.n_teams - self.n_locations))
         allocation_matrix = self.allocate_guests(allocation_matrix, self.n_rounds)
         self.allocation_matrices[self.n_rounds] = allocation_matrix
 
-    def allocate_mid_stages(self):
+    def allocate_mid_stages(self) -> None:
         mid_stages = range(self.n_rounds+1)[2:-1]
         for stage in mid_stages:
             eligible_hosts = [i for i, t in enumerate(self.eligible_teams) if t not in self.visited_locations]
@@ -44,7 +55,7 @@ class Allocator:
             allocation_matrix = self.create_host_matrix(chosen_hosts)
             self.allocation_matrices[stage] = self.allocate_guests(allocation_matrix, stage)
 
-    def allocate_first_stage(self):
+    def allocate_first_stage(self) -> None:
         eligible_hosts = [i for i, t in enumerate(self.eligible_teams) if t not in self.visited_locations]
         chosen_hosts = np.random.choice(eligible_hosts, self.n_locations, replace=False)
         chosen_hosts_num = [self.eligible_teams[i] for i in chosen_hosts]
@@ -53,13 +64,13 @@ class Allocator:
         allocation_matrix = self.create_host_matrix(chosen_hosts)
         self.allocation_matrices[1] = self.allocate_guests(allocation_matrix, 1)
 
-    def create_host_matrix(self, hosts):
+    def create_host_matrix(self, hosts: np.ndarray) -> np.ndarray:
         matrix = np.zeros((self.n_teams, self.n_teams))
         for host in hosts:
             matrix[host][host] = 1
         return matrix
 
-    def allocate_guests(self, host_matrix, stage):
+    def allocate_guests(self, host_matrix: np.ndarray, stage: int) -> np.ndarray:
         self.update_met_teams_b()
         matrix = host_matrix.copy()
         possible_guests = [i for i, team in enumerate(self.eligible_teams) if team not in self.stage_hosts[stage]] # get all teams that are not hosts in that round
