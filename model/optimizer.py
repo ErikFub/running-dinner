@@ -82,5 +82,7 @@ class Optimizer:
         # print(f"Filtered out nodes: {self.n_participants - len(filtered_teams)}")
         self.matrix.filter(filtered_teams)
 
-    def save_best_allocations(self):
-        OptimalSolutionAccess().save(self)
+    def save_best_allocations(self, only_better: bool = True) -> None:
+        optimal_solution_costs = OptimalSolutionAccess().load_optimal_solution().costs
+        if not only_better or optimal_solution_costs > self.lowest_costs:
+            OptimalSolutionAccess().save(self)

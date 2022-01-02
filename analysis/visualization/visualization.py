@@ -4,7 +4,6 @@ import os
 import numpy as np
 import random
 from data_access.optimal_solution import OptimalSolutionAccess
-from data_access.precomputation import PrecomputationDataAccess
 
 
 class GeoJsonCreator:
@@ -106,13 +105,11 @@ class MapVisualization:
         geo_json.save()
 
     @staticmethod
-    def _get_data():
-        optimal_solution = OptimalSolutionAccess()
-        allocation_matrices = optimal_solution.get_allocation_matrices()
-        nodes = optimal_solution.get_nodes()
-        metadata = optimal_solution.get_metadata()
-        if metadata['prefiltered']:
-            nodes = [PrecomputationDataAccess().get_filtered_nodes()[n] for n in nodes]
-        polylines_matrix = optimal_solution.get_polylines_matrix(nodes)
-        polylines_final_dest = optimal_solution.get_polylines_final_dest(nodes)
+    def _get_data() -> tuple:
+        optimal_solution = OptimalSolutionAccess().load_optimal_solution()
+        allocation_matrices = optimal_solution.allocation_matrices
+        nodes = optimal_solution.nodes
+        data = OptimalSolutionAccess()
+        polylines_matrix = data.get_polylines_matrix(nodes)
+        polylines_final_dest = data.get_polylines_final_dest(nodes)
         return polylines_matrix, polylines_final_dest, allocation_matrices, nodes
