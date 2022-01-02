@@ -15,7 +15,7 @@ class GeoJsonCreator:
             "features": []
         }
 
-    def create_polyline(self, input_polyline: str, color: str = "#555555"):
+    def create_polyline(self, input_polyline: str, color: str = "#555555") -> None:
         coords = polyline.decode(input_polyline, geojson=True)
         geo_json_feature = {"type": "Feature",
                             "properties": {
@@ -29,7 +29,7 @@ class GeoJsonCreator:
                             }}
         self.geo_json['features'].append(geo_json_feature)
 
-    def create_point_from_polyline(self, input_polyline, color: str = "#555555", point_idx: int = -1):
+    def create_point_from_polyline(self, input_polyline, color: str = "#555555", point_idx: int = -1) -> None:
         coords = polyline.decode(input_polyline, geojson=True)
         geo_json_feature = {"type": "Feature",
                             "properties": {
@@ -46,18 +46,18 @@ class GeoJsonCreator:
                             }}
         self.geo_json['features'].append(geo_json_feature)
 
-    def save(self):
+    def save(self) -> None:
         with open(self.save_location, 'w') as file_handler:
             file_handler.write(f'var all_turfs = {str(json.dumps(self.geo_json))}')
 
 
 class MapVisualization:
-    def __init__(self):
+    def __init__(self) -> None:
         self.polylines_matrix, self.final_dest_polylines, self.best_allocations, self.nodes = self._get_data()
         self.actual_polylines = {}
-        self.get_actual_polylines()
+        self._compute_actual_polylines()
 
-    def get_actual_polylines(self):
+    def _compute_actual_polylines(self) -> None:
         for stage in self.best_allocations:
             if stage == 1:
                 # because we don't want to see how everyone arrives to the appetizer, we create an empty matrix
@@ -71,11 +71,11 @@ class MapVisualization:
                 self.actual_polylines[stage] = actual_polylines
 
     @staticmethod
-    def _get_random_color():
+    def _get_random_color() -> str:
         r = lambda: random.randint(0, 255)
         return '#%02X%02X%02X' % (r(), r(), r())
 
-    def create(self):
+    def create(self) -> None:
         geo_json = GeoJsonCreator()
         for stage in self.best_allocations:
             if stage == 1:

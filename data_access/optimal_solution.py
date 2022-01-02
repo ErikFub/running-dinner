@@ -44,7 +44,7 @@ class OptimalSolutionAccess:
             metadata = json.load(f)
         return metadata
 
-    def save(self, optimizer):
+    def save(self, optimizer) -> None:
         for stage in optimizer.best_allocation:
             with open(f'{self.project_directory}/sample_data/optimal_solution/stage_{stage}.npy', 'wb') as f:
                 np.save(f, optimizer.best_allocation[stage])

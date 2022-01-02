@@ -1,3 +1,4 @@
+from __future__ import annotations
 from model.allocator import Allocator
 from model.evaluator import Evaluator
 import math
