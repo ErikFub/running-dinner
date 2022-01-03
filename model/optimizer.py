@@ -44,14 +44,13 @@ class Optimizer:
                 self.lowest_costs = costs
         return self
 
-    def run_parallel(self, progress_bar: bool = False, prefilter: bool = False, load_precomputed: bool = True) -> None:
-        n_parallelized = 6
-        opt_params = self.matrix, self.n_rounds, self.n_team_members, self.n_iter
-        run_params = False, prefilter, load_precomputed
-        optimization_results = Parallel(n_jobs=n_parallelized, verbose=20)\
-            (delayed(Optimizer(self.matrix, n_iter=self.n_iter).run)(run_params) for i in range(n_parallelized))
+    def run_parallel(self, progress_bar: bool = False, prefilter: bool = False, load_precomputed: bool = True,
+                     subprocesses: int = 6) -> None:
+        optimization_results = Parallel(n_jobs=subprocesses, verbose=20)\
+            (delayed(Optimizer(self.matrix, n_iter=self.n_iter).run)(progress_bar, prefilter, load_precomputed)
+             for i in range(subprocesses))
         best_model = optimization_results[np.argmin([opt.lowest_costs for opt in optimization_results])]
-        print([opt.lowest_costs for opt in optimization_results])
+        self.prefilter = prefilter
         self.lowest_costs = best_model.lowest_costs
         self.best_allocation = best_model.best_allocation
         self.best_allocation_teams = best_model.best_allocation_teams
