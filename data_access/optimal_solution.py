@@ -1,11 +1,24 @@
 import json
 import os
 import numpy as np
+from data_access.precomputation import PrecomputationDataAccess
+from data_models import OptimalSolution
 
 
 class OptimalSolutionAccess:
     def __init__(self):
         self.project_directory = os.getenv('project_directory')
+
+    def load_optimal_solution(self) -> OptimalSolution:
+        metadata = self.get_metadata()
+        return OptimalSolution(allocation_matrices=self.get_allocation_matrices(),
+                               nodes=self.get_nodes(),
+                               prefiltered=metadata['prefiltered'],
+                               costs=metadata['costs'],
+                               n_iter=metadata['n_iter'],
+                               n_teams=metadata['n_teams'],
+                               n_participants=metadata['n_participants'],
+                               n_locations=metadata['n_locations'])
 
     def get_allocation_matrices(self) -> np.array:
         files = os.listdir(f"{self.project_directory}/sample_data/optimal_solution")
@@ -44,12 +57,16 @@ class OptimalSolutionAccess:
             metadata = json.load(f)
         return metadata
 
-    def save(self, optimizer):
+    def save(self, optimizer) -> None:
         for stage in optimizer.best_allocation:
             with open(f'{self.project_directory}/sample_data/optimal_solution/stage_{stage}.npy', 'wb') as f:
                 np.save(f, optimizer.best_allocation[stage])
         with open(f'{self.project_directory}/sample_data/optimal_solution/nodes.npy', 'wb') as f:
-            np.save(f, np.array(optimizer.best_allocation_teams))
+            if optimizer.prefilter:
+                nodes = [PrecomputationDataAccess().get_filtered_nodes()[n] for n in optimizer.best_allocation_teams]
+            else:
+                nodes = optimizer.best_allocation_teams
+            np.save(f, np.array(nodes))
         with open(f'{self.project_directory}/sample_data/optimal_solution/metadata.json', 'w') as f:
             json.dump(self._construct_metadata(optimizer), f)
 
@@ -60,6 +77,7 @@ class OptimalSolutionAccess:
             "n_participants": optimizer.n_participants,
             "n_locations": optimizer.n_locations,
             "n_iter": optimizer.n_iter,
-            "prefiltered": optimizer.prefilter
+            "prefiltered": optimizer.prefilter,
+            "costs": optimizer.lowest_costs
         }
         return metadata

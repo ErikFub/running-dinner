@@ -11,7 +11,7 @@ class PrecomputationDataAccess:
             filtered_nodes = np.load(f)
         return list(filtered_nodes)
 
-    def save_filtered_nodes(self, filtered_nodes: list):
+    def save_filtered_nodes(self, filtered_nodes: list) -> None:
         filtered_nodes = np.array(filtered_nodes)
         with open(f'{self.project_directory}/sample_data/precomputation/filtered_nodes.npy', 'wb') as f:
-            filtered_nodes = np.save(f, filtered_nodes)
+            np.save(f, filtered_nodes)

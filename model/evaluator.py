@@ -3,12 +3,13 @@ from model.distance_matrix import DistanceMatrix
 
 
 class Evaluator:
-    def __init__(self, distances: np.array, allocation_matrices: dict[np.array], teams: list):
+    def __init__(self, distances: np.array, allocation_matrices: dict[int, np.array], teams: list) -> None:
         self.allocation_matrices = allocation_matrices
         self.actual_distances = {}
         self.teams_distances = distances[teams, :][:, teams]
 
-    def get_actual_distances(self):
+    def get_actual_distances(self) -> None:
+        # TODO create own class for such conversions
         for stage in self.allocation_matrices:
             if stage == 1:
                 self.actual_distances[stage] = self.teams_distances
@@ -20,7 +21,7 @@ class Evaluator:
                     actual_distances[team_idx] = self.teams_distances[host_idx]
                 self.actual_distances[stage] = actual_distances
 
-    def get_costs(self):
+    def get_costs(self) -> float:
         self.get_actual_distances()
         total_costs = 0
         for stage in self.allocation_matrices:
