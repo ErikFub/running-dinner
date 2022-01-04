@@ -28,7 +28,8 @@ class GeoJsonCreator:
                             }}
         self.geo_json['features'].append(geo_json_feature)
 
-    def create_point_from_polyline(self, input_polyline, color: str = "#555555", point_idx: int = -1) -> None:
+    def create_point_from_polyline(self, input_polyline, name: str = "", color: str = "#555555",
+                                   point_idx: int = -1) -> None:
         coords = polyline.decode(input_polyline, geojson=True)
         geo_json_feature = {"type": "Feature",
                             "properties": {
@@ -37,7 +38,8 @@ class GeoJsonCreator:
                                 "marker-symbol": "",
                                 "stroke": "#555555",
                                 "stroke-width": 2,
-                                "stroke-opacity": 1
+                                "stroke-opacity": 1,
+                                "name": name
                             },
                             "geometry": {
                                 "type": "Point",
@@ -84,7 +86,7 @@ class MapVisualization:
                     for c in range(allocation_matrix.shape[1]):
                         if allocation_matrix[r][c] == 1 and r != c:
                             pline = self.actual_polylines[2][r][c]
-                            geo_json.create_point_from_polyline(pline, color=stage_color, point_idx=0)
+                            geo_json.create_point_from_polyline(pline, color=stage_color, point_idx=0, name=stage)
             if stage > 1:
                 allocation_matrix = self.best_allocations[stage]
                 stage_color = self._get_random_color()
@@ -93,7 +95,7 @@ class MapVisualization:
                         if allocation_matrix[r][c] == 1:
                             pline = self.actual_polylines[stage][r][c]
                             geo_json.create_polyline(pline, color=stage_color)
-                            geo_json.create_point_from_polyline(pline, color=stage_color)
+                            geo_json.create_point_from_polyline(pline, color=stage_color, name=stage)
         last_stage = max(self.best_allocations.keys())
         last_matrix = self.best_allocations[last_stage]
         for r in range(last_matrix.shape[0]):
@@ -101,7 +103,7 @@ class MapVisualization:
                 if last_matrix[r][c] == 1 and r != c:
                     pline = self.final_dest_polylines[c]
                     geo_json.create_polyline(pline)
-                    geo_json.create_point_from_polyline(pline)
+                    geo_json.create_point_from_polyline(pline, name="Final Destination")
         geo_json.save()
 
     @staticmethod
